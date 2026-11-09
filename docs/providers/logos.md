@@ -7,6 +7,13 @@ Logos are currently matched in the following ways:
 - For merchants, logos are matched via the merchant's website FQDN. The website comes from the bank sync provider (e.g. Plaid, Akahu) or from an AI provider that matches it to the merchant name. A logo the provider already supplies is kept
 - For securities, logos are matched using the ticker symbol
 
+Automatic account-logo discovery contacts third-party favicon and app-store
+services with the institution domain and, for app-store searches, its name.
+Self-hosted installations disable that automatic lookup by default. Set
+`ACCOUNT_LOGO_DISCOVERY_ENABLED=true` to opt in. Opening the icon picker or
+manually choosing an online icon is an explicit lookup and still contacts the
+selected services; uploading an icon does not.
+
 > [!NOTE]
 > Currently ticker symbol matching cannot specify the exchange and since US exchanges are prioritized, securities from other exchanges might not have the right logo.
 

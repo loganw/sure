@@ -45,12 +45,28 @@ class ActiveRecordEncryptionConfigTest < ActiveSupport::TestCase
     assert ActiveRecordEncryptionConfig.runtime_configured?(config)
   end
 
-  test "explicit configuration excludes runtime generated config" do
+  test "self-hosted runtime generated config is ready but not explicit" do
     ActiveRecordEncryptionConfig.stubs(:complete_env?).returns(false)
     ActiveRecordEncryptionConfig.stubs(:credentials_configured?).returns(false)
     ActiveRecordEncryptionConfig.stubs(:runtime_configured?).returns(true)
+    ActiveRecordEncryptionConfig.stubs(:self_hosted?).returns(true)
 
     refute ActiveRecordEncryptionConfig.explicitly_configured?
     assert ActiveRecordEncryptionConfig.ready?
+  end
+
+  test "runtime test keys do not enable conditional encryption outside self-hosted mode" do
+    ActiveRecordEncryptionConfig.stubs(:complete_env?).returns(false)
+    ActiveRecordEncryptionConfig.stubs(:credentials_configured?).returns(false)
+    ActiveRecordEncryptionConfig.stubs(:runtime_configured?).returns(true)
+    ActiveRecordEncryptionConfig.stubs(:self_hosted?).returns(false)
+
+    refute ActiveRecordEncryptionConfig.ready?
+  end
+
+  test "encryptable models use runtime generated configuration" do
+    ActiveRecordEncryptionConfig.stubs(:ready?).returns(true)
+
+    assert User.encryption_ready?
   end
 end

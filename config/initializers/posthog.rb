@@ -10,7 +10,10 @@ end
 
 Rails.configuration.x.posthog.api_key = ENV["POSTHOG_KEY"].presence
 Rails.configuration.x.posthog.host = ENV.fetch("POSTHOG_HOST", "https://us.i.posthog.com")
-Rails.configuration.x.posthog.feedback_enabled = ActiveModel::Type::Boolean.new.cast(ENV.fetch("POSTHOG_FEEDBACK_ENABLED", "true"))
+self_hosted_feedback_default = Rails.configuration.app_mode.self_hosted? ? "false" : "true"
+Rails.configuration.x.posthog.feedback_enabled = ActiveModel::Type::Boolean.new.cast(
+  ENV.fetch("POSTHOG_FEEDBACK_ENABLED", self_hosted_feedback_default)
+)
 # Public client configuration for shared feedback, including self-hosted Sankey.
 # This write-only project token is safe to distribute; it is not an admin key.
 # https://posthog.com/docs/api

@@ -3,6 +3,37 @@
 require "test_helper"
 
 class OauthBasicTest < ActionDispatch::IntegrationTest
+  test "browser authorization posts require CSRF while token posts do not" do
+    oauth_app = Doorkeeper::Application.create!(
+      name: "CSRF Test Client",
+      redirect_uri: "https://client.example.com/callback",
+      scopes: "read"
+    )
+    sign_in users(:family_admin)
+    original = ActionController::Base.allow_forgery_protection
+    ActionController::Base.allow_forgery_protection = true
+
+    post "/oauth/authorize", params: {
+      client_id: oauth_app.uid,
+      redirect_uri: oauth_app.redirect_uri,
+      response_type: "code",
+      scope: "read"
+    }
+    assert_response :unprocessable_content
+
+    post "/oauth/token", params: {
+      grant_type: "authorization_code",
+      code: "invalid_code",
+      redirect_uri: oauth_app.redirect_uri,
+      client_id: oauth_app.uid,
+      client_secret: oauth_app.secret
+    }
+    assert_response :unauthorized
+    assert_equal "invalid_client", response.parsed_body["error"]
+  ensure
+    ActionController::Base.allow_forgery_protection = original
+  end
+
   test "oauth authorization endpoint requires authentication" do
     oauth_app = Doorkeeper::Application.create!(
       name: "Test API Client",

@@ -672,10 +672,10 @@ class Settings::ProvidersControllerTest < ActionDispatch::IntegrationTest
     assert_match(/Flex Query/i, response.body)
   end
 
-  test "GET show warns on configured provider forms when self-hosted encryption keys are not explicitly configured" do
+  test "GET show warns on configured provider forms when self-hosted encryption is unavailable" do
     Setting["plaid_client_id"] = "test-client-id"
     Setting["plaid_secret"] = "test-secret"
-    ActiveRecordEncryptionConfig.stubs(:explicitly_configured?).returns(false)
+    ActiveRecordEncryptionConfig.stubs(:ready?).returns(false)
 
     with_self_hosting do
       get settings_providers_url
@@ -697,7 +697,7 @@ class Settings::ProvidersControllerTest < ActionDispatch::IntegrationTest
     Setting["plaid_client_id"] = "test-client-id"
     Setting["plaid_secret"] = "test-secret"
     Rails.configuration.stubs(:app_mode).returns("managed".inquiry)
-    ActiveRecordEncryptionConfig.stubs(:explicitly_configured?).returns(false)
+    ActiveRecordEncryptionConfig.stubs(:ready?).returns(false)
 
     get settings_providers_url
 
@@ -733,9 +733,9 @@ class Settings::ProvidersControllerTest < ActionDispatch::IntegrationTest
     assert_includes response.body, I18n.t("settings.providers.ibkr_panel.add_connection")
   end
 
-  test "GET connect_form warns when self-hosted encryption keys are not explicitly configured" do
+  test "GET connect_form warns when self-hosted encryption is unavailable" do
     with_self_hosting do
-      ActiveRecordEncryptionConfig.stubs(:explicitly_configured?).returns(false)
+      ActiveRecordEncryptionConfig.stubs(:ready?).returns(false)
 
       get connect_form_settings_providers_path(provider_key: "ibkr")
 
@@ -752,7 +752,7 @@ class Settings::ProvidersControllerTest < ActionDispatch::IntegrationTest
 
   test "GET connect_form hides encryption warning when self-hosted encryption keys are configured" do
     with_self_hosting do
-      ActiveRecordEncryptionConfig.stubs(:explicitly_configured?).returns(true)
+      ActiveRecordEncryptionConfig.stubs(:ready?).returns(true)
 
       get connect_form_settings_providers_path(provider_key: "ibkr")
 
@@ -769,7 +769,7 @@ class Settings::ProvidersControllerTest < ActionDispatch::IntegrationTest
 
   test "GET connect_form hides encryption warning in managed mode" do
     Rails.configuration.stubs(:app_mode).returns("managed".inquiry)
-    ActiveRecordEncryptionConfig.stubs(:explicitly_configured?).returns(false)
+    ActiveRecordEncryptionConfig.stubs(:ready?).returns(false)
 
     get connect_form_settings_providers_path(provider_key: "ibkr")
 
@@ -785,7 +785,7 @@ class Settings::ProvidersControllerTest < ActionDispatch::IntegrationTest
 
   test "GET connect_form uses shared encryption warning for provider panels" do
     with_self_hosting do
-      ActiveRecordEncryptionConfig.stubs(:explicitly_configured?).returns(false)
+      ActiveRecordEncryptionConfig.stubs(:ready?).returns(false)
 
       get connect_form_settings_providers_path(provider_key: "wise")
 

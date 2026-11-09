@@ -70,10 +70,12 @@ x-db-env: &db_env
 
 x-rails-env: &rails_env
   <<: *db_env
-  SECRET_KEY_BASE: ${SECRET_KEY_BASE:-a7523c3d0ae56415046ad8abae168d71074a79534a7062258f8d1d51ac2f76d3c3bc86d86b6b0b307df30d9a6a90a2066a3fa9e67c5e6f374dbd7dd4e0778e13}
+  SECRET_KEY_BASE: "${SECRET_KEY_BASE:?SECRET_KEY_BASE is required; generate one with openssl rand -hex 64}"
   SELF_HOSTED: "true"
   RAILS_FORCE_SSL: "false"
   RAILS_ASSUME_SSL: "false"
+  RAILS_ALLOWED_HOSTS: ${RAILS_ALLOWED_HOSTS:-localhost,127.0.0.1,[::1]}
+  ACCOUNT_LOGO_DISCOVERY_ENABLED: ${ACCOUNT_LOGO_DISCOVERY_ENABLED:-false}
   DB_HOST: db
   DB_PORT: 5432
   REDIS_URL: redis://redis:6379/1
@@ -89,7 +91,7 @@ x-rails-env: &rails_env
   HTTP_PROXY: "http://pipelock:8888"
   # Skip proxy for internal Docker network services (including ollama for local LLM calls)
   NO_PROXY: "db,redis,pipelock,ollama,openclaw,localhost,127.0.0.1"
-  AI_DEBUG_MODE: "true" # Useful for debugging, set to "false" in production
+  AI_DEBUG_MODE: ${AI_DEBUG_MODE:-false} # Opt in only while actively debugging
   # Ollama using OpenAI API compatible endpoints
   OPENAI_ACCESS_TOKEN: token-can-be-any-value-for-ollama
   OPENAI_MODEL: llama3.1:8b # Note: Use tool-enabled model
@@ -177,7 +179,7 @@ services:
       - "http://web:3000/mcp"
     ports:
       # MCP reverse proxy — external AI assistants connect here
-      - "${MCP_PROXY_PORT:-8889}:8889"
+      - "${SURE_BIND_ADDRESS:-127.0.0.1}:${MCP_PROXY_PORT:-8889}:8889"
       # Uncomment to expose forward proxy endpoints (/health, /metrics, /stats):
       # - "8888:8888"
     healthcheck:
@@ -207,7 +209,7 @@ services:
     restart: unless-stopped
     image: docker.io/ollama/ollama:latest
     ports:
-      - "11434:11434"
+      - "${SURE_BIND_ADDRESS:-127.0.0.1}:11434:11434"
     environment:
       - OLLAMA_KEEP_ALIVE=1h
     healthcheck:
@@ -237,14 +239,13 @@ services:
     depends_on:
       - ollama
     ports:
-      - "8080:8080"
+      - "${SURE_BIND_ADDRESS:-127.0.0.1}:8080:8080"
     environment: # https://docs.openwebui.com/getting-started/env-configuration#default_models
       - OLLAMA_BASE_URLS=http://host.docker.internal:11434 #comma separated ollama hosts
       - ENV=dev
-      - WEBUI_AUTH=False
+      - WEBUI_AUTH=True
       - WEBUI_NAME=AI
       - WEBUI_URL=http://localhost:8080
-      - WEBUI_SECRET_KEY=t0p-s3cr3t # pipelock:ignore
       - NO_PROXY=host.docker.internal
     extra_hosts:
       - host.docker.internal:host-gateway
@@ -266,22 +267,18 @@ services:
       HOME: /home/node
       TERM: xterm-256color
       TZ: ${OPENCLAW_TZ:-UTC}
-      OPENCLAW_GATEWAY_TOKEN: ${EXTERNAL_ASSISTANT_TOKEN:-changeme}
+      OPENCLAW_GATEWAY_TOKEN: ${EXTERNAL_ASSISTANT_TOKEN:-}
       OPENCLAW_ALLOW_INSECURE_PRIVATE_WS: ${OPENCLAW_ALLOW_INSECURE_PRIVATE_WS:-}
     command:
-      [
-        "node",
-        "dist/index.js",
-        "gateway",
-        # OpenClaw may exit with "Missing config" on first boot in example setups.
-        # `--allow-unconfigured` keeps the gateway running until you complete `openclaw setup`.
-        "pass",
-        "--allow-unconfigured",
-        "--bind",
-        "${OPENCLAW_GATEWAY_BIND:-lan}",
-        "--port",
-        "18789",
-      ]
+      - "sh"
+      - "-c"
+      - |
+        if [ -z "$$OPENCLAW_GATEWAY_TOKEN" ]; then
+          echo "EXTERNAL_ASSISTANT_TOKEN is required for the OpenClaw profile" >&2
+          exit 1
+        fi
+        exec node dist/index.js gateway pass --allow-unconfigured \
+          --bind "${OPENCLAW_GATEWAY_BIND:-lan}" --port 18789
     healthcheck:
       test:
         [
@@ -296,7 +293,7 @@ services:
       start_period: 20s
     ports:
       # Expose for local onboarding/debugging. Sure uses the internal service name.
-      - "${OPENCLAW_GATEWAY_PORT:-18789}:18789"
+      - "${SURE_BIND_ADDRESS:-127.0.0.1}:${OPENCLAW_GATEWAY_PORT:-18789}:18789"
     volumes:
       - openclaw-config:/home/node/.openclaw
       - openclaw-workspace:/home/node/.openclaw/workspace
@@ -317,7 +314,7 @@ services:
       # set BINDING=:: in the environment block. See docs/hosting/docker.md
       # "Binding to IPv6" for details.
       # - "[::]:${PORT:-3000}:3000"
-      - ${PORT:-3000}:3000
+      - "${SURE_BIND_ADDRESS:-127.0.0.1}:${PORT:-3000}:3000"
     restart: unless-stopped
     environment:
       <<: *rails_env

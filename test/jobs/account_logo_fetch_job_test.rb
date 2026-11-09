@@ -59,6 +59,25 @@ class AccountLogoFetchJobTest < ActiveJob::TestCase
     AccountLogoFetchJob.perform_now(@account)
   end
 
+  test "self-hosted automatic discovery is disabled by default" do
+    Rails.configuration.stubs(:app_mode).returns("self_hosted".inquiry)
+    Account::LogoFetcher.any_instance.expects(:fetch).never
+
+    with_env_overrides(ACCOUNT_LOGO_DISCOVERY_ENABLED: nil) do
+      assert_no_enqueued_jobs { AccountLogoFetchJob.perform_paced(@account) }
+      AccountLogoFetchJob.perform_now(@account)
+    end
+  end
+
+  test "self-hosted operators can opt in to automatic discovery" do
+    Rails.configuration.stubs(:app_mode).returns("self_hosted".inquiry)
+    Account::LogoFetcher.any_instance.expects(:fetch).with(auto: true).returns(true)
+
+    with_env_overrides(ACCOUNT_LOGO_DISCOVERY_ENABLED: "true") do
+      AccountLogoFetchJob.perform_now(@account)
+    end
+  end
+
   test "drops the old domain's automatic icon when nothing is found for the new one" do
     @account.logo.attach(io: file_fixture("square-placeholder.png").open, filename: "sberbank.ru.png",
                          metadata: { "logo_source" => "google", "logo_key" => "google", "logo_auto" => true })

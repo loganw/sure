@@ -21,15 +21,9 @@ class SophtronItem < ApplicationRecord
 
   # Helper to detect if ActiveRecord Encryption is configured for this app.
   #
-  # Checks both Rails credentials and environment variables for encryption keys.
-  #
   # @return [Boolean] true if encryption is properly configured
   def self.encryption_ready?
-    creds_ready = Rails.application.credentials.active_record_encryption.present?
-    env_ready = ENV["ACTIVE_RECORD_ENCRYPTION_PRIMARY_KEY"].present? &&
-                ENV["ACTIVE_RECORD_ENCRYPTION_DETERMINISTIC_KEY"].present? &&
-                ENV["ACTIVE_RECORD_ENCRYPTION_KEY_DERIVATION_SALT"].present?
-    creds_ready || env_ready
+    ActiveRecordEncryptionConfig.ready?
   end
 
   # Encrypt sensitive credentials if ActiveRecord encryption is configured (credentials OR env vars)

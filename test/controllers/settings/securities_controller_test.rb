@@ -5,7 +5,7 @@ class Settings::SecuritiesControllerTest < ActionDispatch::IntegrationTest
 
   test "shows encryption warning when self-hosted and encryption is not configured" do
     Rails.configuration.stubs(:app_mode).returns("self_hosted".inquiry)
-    ActiveRecordEncryptionConfig.stubs(:explicitly_configured?).returns(false)
+    ActiveRecordEncryptionConfig.stubs(:ready?).returns(false)
 
     get settings_security_url
 
@@ -18,7 +18,7 @@ class Settings::SecuritiesControllerTest < ActionDispatch::IntegrationTest
 
   test "hides encryption warning when encryption is configured" do
     Rails.configuration.stubs(:app_mode).returns("self_hosted".inquiry)
-    ActiveRecordEncryptionConfig.stubs(:explicitly_configured?).returns(true)
+    ActiveRecordEncryptionConfig.stubs(:ready?).returns(true)
 
     get settings_security_url
 

@@ -49,7 +49,13 @@ module ActiveRecordEncryptionConfig
   end
 
   def ready?
-    explicitly_configured? || runtime_configured?
+    explicitly_configured? || (self_hosted? && runtime_configured?)
+  end
+
+  def self_hosted?
+    Rails.application.config.app_mode.self_hosted?
+  rescue NoMethodError
+    false
   end
 
   def env_value_present?(env, key)

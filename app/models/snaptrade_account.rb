@@ -153,15 +153,13 @@ class SnaptradeAccount < ApplicationRecord
     # Deep convert each balance entry to ensure we have hashes
     data = Array(balances_data).map { |b| sdk_object_to_hash(b).with_indifferent_access }
 
-    Rails.logger.info "SnaptradeAccount##{id} upsert_balances! - raw data: #{data.inspect}"
-
     # The primary entry (account currency → USD → first) stays in cash_balance;
     # the full set is persisted so the processor can surface non-primary-currency
     # cash as holdings (issue #1809).
     cash_entry = primary_cash_entry(data)
 
     cash_value = cash_entry ? cash_entry[:cash] : cash_balance
-    Rails.logger.info "SnaptradeAccount##{id} upsert_balances! - setting cash_balance=#{cash_value}, persisting #{data.size} entrie(s)"
+    Rails.logger.info "SnaptradeAccount##{id} upsert_balances! - persisting #{data.size} balance entrie(s)"
 
     # Only update cash_balance, preserve current_balance (total account value)
     update!(cash_balance: cash_value, raw_balances_payload: data)

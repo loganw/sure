@@ -4,11 +4,19 @@ class AccountLogoFetchJob < ApplicationJob
   PACE_KEY = "account_logo_fetch_pace"
   MAX_SLOT_PROBES = 50
 
+  def self.automatic_discovery_enabled?
+    return true unless Rails.configuration.app_mode.self_hosted?
+
+    ActiveModel::Type::Boolean.new.cast(ENV.fetch("ACCOUNT_LOGO_DISCOVERY_ENABLED", "false"))
+  end
+
   # Spaces fetches for the iTunes Search API limit: each one claims the next
   # free time slot in the shared cache (Redis in production), so imports, the
   # nightly backfill and single domain changes share one queue. A claim lasts
   # until its slot has passed; a lone domain change usually fetches at once.
   def self.perform_paced(account)
+    return unless automatic_discovery_enabled?
+
     spacing = AccountLogoBackfillJob::SPACING.to_i
     now = Time.current.to_i
     # The next slot others claimed is only a hint where to start probing.
@@ -26,6 +34,7 @@ class AccountLogoFetchJob < ApplicationJob
   end
 
   def perform(account)
+    return unless self.class.automatic_discovery_enabled?
     return unless account.logo_auto_fetchable?
     return if Account::LogoFetcher.new(account).fetch(auto: true)
 
