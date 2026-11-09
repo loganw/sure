@@ -56,6 +56,10 @@ jobs:
             config/locales/views/reports/zh-TW.yml
 
       - name: Validate Pipelock deployment contracts
+        env:
+          # Compose intentionally requires an explicit secret. This value is
+          # scoped to configuration rendering in CI and is never deployed.
+          SECRET_KEY_BASE: test-only-compose-validation-secret
         shell: bash
         run: |
           set -euo pipefail
