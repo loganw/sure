@@ -28,7 +28,8 @@ class OauthBasicTest < ActionDispatch::IntegrationTest
       client_id: oauth_app.uid,
       client_secret: oauth_app.secret
     }
-    assert_response :bad_request
+    assert_response :unauthorized
+    assert_equal "invalid_client", response.parsed_body["error"]
   ensure
     ActionController::Base.allow_forgery_protection = original
   end

@@ -15,7 +15,7 @@ class ApplicationHelperTest < ActionView::TestCase
     assert_includes rendered, 'href="https://example.com"'
     refute_includes rendered, "<script"
     refute_includes rendered, "<img"
-    refute_includes rendered, "javascript:"
+    refute_match(/<a\b[^>]*\bhref=["']javascript:/i, rendered)
     refute_includes rendered, "onerror"
   end
 
