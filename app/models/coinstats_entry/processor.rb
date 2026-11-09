@@ -234,7 +234,7 @@ class CoinstatsEntry::Processor
         -absolute_amount
       end
     rescue ArgumentError => e
-      Rails.logger.error "Failed to parse CoinStats transaction amount: #{data.inspect} - #{e.message}"
+      Rails.logger.error "Failed to parse CoinStats transaction amount: #{e.message}"
       raise
     end
 

@@ -124,11 +124,10 @@ class SnaptradeItemsController < ApplicationController
 
   # Link selected accounts to Sure
   def complete_account_setup
-    Rails.logger.info "SnapTrade complete_account_setup - params: #{params.to_unsafe_h.inspect}"
     account_ids = params[:account_ids] || []
     account_types = params[:account_types] || {}
     sync_start_dates = params[:sync_start_dates] || {}
-    Rails.logger.info "SnapTrade complete_account_setup - account_ids: #{account_ids.inspect}, sync_start_dates: #{sync_start_dates.inspect}"
+    Rails.logger.info "SnapTrade complete_account_setup - processing #{account_ids.size} selected account(s)"
 
     linked_count = 0
     errors = []

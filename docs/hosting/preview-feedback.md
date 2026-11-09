@@ -16,13 +16,13 @@ current browser client and event allowlist are still specific to Sankey.
 | --- | --- | --- |
 | Sure app | Its existing `[app] sure-app` PostHog project | Existing `POSTHOG_KEY` / `POSTHOG_HOST`, plus the feature's survey ID |
 | Demo | Its existing `[app] sure-demo` PostHog project | Existing `POSTHOG_KEY` / `POSTHOG_HOST`, plus the feature's survey ID |
-| Production self-hosted | Shared `[app] self-hosted` project | Bundled public project token and feature survey ID; no operator setup |
+| Production self-hosted | Shared `[app] self-hosted` project | Set `POSTHOG_FEEDBACK_ENABLED=true`; the public project token and survey ID are bundled |
 
 Managed deployments must use a survey belonging to their own project. Sankey's
 survey variable is `POSTHOG_SANKEY_SURVEY_ID`. Self-hosted feedback stays separate
-from any analytics project configured by the operator. Operators can disable the
-shared connection with `POSTHOG_FEEDBACK_ENABLED=false`; this does not reroute
-feedback to another project. Shared collection is disabled outside production by default.
+from any analytics project configured by the operator. It is disabled by default;
+operators can opt in with `POSTHOG_FEEDBACK_ENABLED=true`. This does not reroute
+feedback to another project. Shared collection is also disabled outside production by default.
 
 ### Local testing
 
@@ -31,9 +31,9 @@ To test without changing Rails to production mode, temporarily set
 process. Remove the override and restart when finished. This opt-in only applies
 to development; automated test environments remain disabled.
 
-With `SELF_HOSTED=true`, enable Preview features and click the Sankey thumbs-up/down
-buttons to test the bundled API survey. `POSTHOG_FEEDBACK_ENABLED=false` still
-opts out. Standard pop-up surveys require `POSTHOG_KEY` / `POSTHOG_HOST` for their
+With `SELF_HOSTED=true`, set `POSTHOG_FEEDBACK_ENABLED=true`, enable Preview
+features, and click the Sankey thumbs-up/down buttons to test the bundled API survey.
+Standard pop-up surveys require `POSTHOG_KEY` / `POSTHOG_HOST` for their
 project; managed Sankey feedback also requires `POSTHOG_SANKEY_SURVEY_ID`.
 The override uses the configured live projects, so submitted responses are real.
 
@@ -151,9 +151,10 @@ background-job hook is added.
 The server event uses the bundled shared feedback project, the same destination
 as self-hosted Sankey feedback, in both managed and self-hosted deployments.
 It does not require `POSTHOG_KEY` / `POSTHOG_HOST` or duplicate the event to an
-installation's normal analytics project. `POSTHOG_FEEDBACK_ENABLED=false`
-disables it. Collection requires production or the existing explicit development
-opt-in (`POSTHOG_DEVELOPMENT_ENABLED=true`); automated tests remain disabled.
+installation's normal analytics project. `POSTHOG_FEEDBACK_ENABLED=true`
+enables it for self-hosted deployments. Collection requires production or the
+existing explicit development opt-in (`POSTHOG_DEVELOPMENT_ENABLED=true`);
+automated tests remain disabled.
 Browser SDK opt-outs stored in localStorage and ad blockers cannot suppress this
 server-side event; Rails cannot read that browser-only state.
 
@@ -250,8 +251,8 @@ secrets. Rotating the secret or losing/evicting Redis claims can permit another
 capture that day. Claims expire after two days; deployment timezone does not
 change the midnight UTC boundary.
 
-These events reuse the bundled feedback destination, production/development
-opt-in rules and `POSTHOG_FEEDBACK_ENABLED` opt-out above. Tests are disabled
+These events reuse the bundled feedback destination and the production/development
+opt-in rules above. Tests are disabled
 unless a test explicitly replaces the collector and environment gates. Browser
 opt-outs cannot control server capture. The only event properties are Sure's
 version, disabled person-profile processing and disabled GeoIP: no prompt,

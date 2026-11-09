@@ -18,6 +18,7 @@ class PosthogTest < ActiveSupport::TestCase
 
   test "production feedback uses the bundled project independently of operator analytics" do
     Rails.env.stubs(:production?).returns(true)
+    Rails.configuration.stubs(:app_mode).returns("managed".inquiry)
     normal_client = mock("normal analytics")
     feedback_client = mock("shared feedback")
     PostHog::Client.expects(:new).with(has_entries(api_key: "operator-test-key", host: "https://analytics.example.test")).returns(normal_client)
@@ -26,6 +27,28 @@ class PosthogTest < ActiveSupport::TestCase
     load_initializer(POSTHOG_KEY: "operator-test-key", POSTHOG_HOST: "https://analytics.example.test")
 
     assert_same normal_client, $posthog
+    assert_same feedback_client, $posthog_feedback
+  end
+
+  test "self-hosted production feedback is disabled by default" do
+    Rails.env.stubs(:production?).returns(true)
+    Rails.configuration.stubs(:app_mode).returns("self_hosted".inquiry)
+    PostHog::Client.expects(:new).never
+
+    load_initializer
+
+    refute Rails.configuration.x.posthog.feedback_enabled
+    assert_nil $posthog_feedback
+  end
+
+  test "self-hosted production feedback can be explicitly enabled" do
+    Rails.env.stubs(:production?).returns(true)
+    Rails.configuration.stubs(:app_mode).returns("self_hosted".inquiry)
+    feedback_client = mock("shared feedback")
+    PostHog::Client.expects(:new).with(has_entries(@previous_config.self_hosted_feedback_project)).returns(feedback_client)
+
+    load_initializer(POSTHOG_FEEDBACK_ENABLED: "true")
+
     assert_same feedback_client, $posthog_feedback
   end
 
@@ -68,7 +91,7 @@ class PosthogTest < ActiveSupport::TestCase
 
   private
     def load_initializer(**overrides)
-      with_env_overrides({ POSTHOG_KEY: nil, POSTHOG_HOST: nil, POSTHOG_FEEDBACK_ENABLED: "true",
+      with_env_overrides({ POSTHOG_KEY: nil, POSTHOG_HOST: nil, POSTHOG_FEEDBACK_ENABLED: nil,
                           POSTHOG_DEVELOPMENT_ENABLED: "false" }.merge(overrides)) do
         load Rails.root.join("config/initializers/posthog.rb")
       end

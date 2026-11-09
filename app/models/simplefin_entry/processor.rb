@@ -179,7 +179,7 @@ class SimplefinEntry::Processor
         t = transacted_date
         return t if t
       end
-      Rails.logger.error("SimpleFin transaction missing posted/transacted date: #{data.inspect}")
+      Rails.logger.error("SimpleFin transaction missing posted/transacted date")
       raise ArgumentError, "Invalid date format: #{data[:posted].inspect} / #{data[:transacted_at].inspect}"
     end
 

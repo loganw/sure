@@ -49,12 +49,10 @@ This command will do the following:
 
 At this point, you should have `compose.yml` in your directory. It includes an optional `backup` service; see [Backups, upgrades and rollbacks](#backups-upgrades-and-rollbacks).
 
-### Step 3 (optional): Configure your environment
+### Step 3: Configure your environment
 
-By default, our `compose.example.yml` file runs without any configuration.  
-That said, if you would like extra security (important if you're running outside of a local network), you can follow the steps below to set things up.
-
-If you're running the app locally and don't care much about security, you can skip this step.
+The Compose file requires a unique `SECRET_KEY_BASE` so sessions, encrypted
+credentials, and other signed data are not protected by a shared public secret.
 
 #### Create your environment file
 
@@ -227,9 +225,26 @@ WEBAUTHN_ALLOWED_ORIGINS="https://sure.example.com"
 
 `WEBAUTHN_RP_ID` should usually be your registrable domain, not a full URL. See [WebAuthn MFA Configuration](webauthn.md) before changing hostnames or reverse proxy settings for an instance with registered passkeys.
 
+#### Network binding and LAN access
+
+Docker publishes Sure only on `127.0.0.1` by default, so other devices on the
+LAN cannot connect. To intentionally expose it to your LAN, set both the host
+bind address and the Rails host allowlist in `.env`:
+
+```txt
+SURE_BIND_ADDRESS=0.0.0.0
+RAILS_ALLOWED_HOSTS=localhost,127.0.0.1,192.168.1.50,sure.local
+```
+
+Replace the example IP and hostname with the addresses you actually use. Do not
+expose the plain-HTTP Compose port directly to the internet; terminate HTTPS at
+a reverse proxy instead.
+
 #### Binding to IPv6 (optional)
 
-By default Sure listens on `0.0.0.0:3000` (IPv4 wildcard) inside the container and Docker publishes the port on the host's IPv4 interface only. If you want the app reachable over IPv6 as well, two things need to change:
+Sure listens on `0.0.0.0:3000` inside the container, but Docker publishes it only
+on the host's IPv4 loopback interface by default. If you want the app reachable
+over IPv6 as well, two things need to change:
 
 1. **Tell the app to bind to `[::]`** by setting `BINDING=::` in the container environment. `BINDING` is Rails' native env var for the server bind address. On any kernel with `net.ipv6.bindv6only=0` (the default on Linux and macOS) a single `[::]` bind is **dual-stack**: it accepts both IPv6 and IPv4 clients from the same socket. You do not need two binds and you do not need two ports.
 2. **Tell Docker to publish the host port on IPv6** by adding a bracketed-host `ports:` entry alongside the existing IPv4 one.
@@ -240,14 +255,14 @@ In `compose.yml`:
 services:
   web:
     ports:
-      - ${PORT:-3000}:3000
-      - "[::]:${PORT:-3000}:3000"
+      - "${SURE_BIND_ADDRESS:-127.0.0.1}:${PORT:-3000}:3000"
+      - "[::1]:${PORT:-3000}:3000"
     environment:
       <<: *rails_env
       BINDING: "::"
 ```
 
-With both changes in place, `http://127.0.0.1:3000/` and `http://[::1]:3000/` both work against the same container.
+With both changes in place, `http://127.0.0.1:3000/` and `http://[::1]:3000/` both work against the same container. Use `[::]` instead of `[::1]` only for intentional IPv6 LAN/public access, and include those hostnames or addresses in `RAILS_ALLOWED_HOSTS`.
 
 **Note:** Docker's default userland proxy already bridges host-side IPv6 publishes to the container's internal IPv4 address, so in many setups just adding the `[::]:` port entry is enough. Setting `BINDING=::` inside the container only becomes load-bearing when the Docker daemon has `"ipv6": true` + `"ip6tables": true` configured (uncommon for self-hosters) and forwards raw IPv6 packets into the container via netfilter instead of the proxy. Setting both is harmless and future-proof.
 
@@ -336,6 +351,11 @@ docker compose -f compose.ai.yml up -d
 # Run with Pipelock + Ollama
 docker compose -f compose.ai.yml --profile local-ai up -d
 ```
+
+All published AI ports bind to `SURE_BIND_ADDRESS`, which defaults to
+`127.0.0.1`. Open WebUI authentication is enabled. The bundled OpenClaw profile
+refuses to start until `EXTERNAL_ASSISTANT_TOKEN` is set to a nonblank, unique
+value.
 
 ### Setting up the external AI assistant
 

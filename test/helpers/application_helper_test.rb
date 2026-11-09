@@ -1,6 +1,24 @@
 require "test_helper"
 
 class ApplicationHelperTest < ActionView::TestCase
+  test "#markdown filters raw HTML and unsafe links" do
+    rendered = markdown(<<~MARKDOWN)
+      **Safe text**
+
+      <script>alert("xss")</script>
+      <img src=x onerror="alert('xss')">
+      [unsafe](javascript:alert('xss'))
+      [safe](https://example.com)
+    MARKDOWN
+
+    assert_includes rendered, "<strong>Safe text</strong>"
+    assert_includes rendered, 'href="https://example.com"'
+    refute_includes rendered, "<script"
+    refute_includes rendered, "<img"
+    refute_includes rendered, "javascript:"
+    refute_includes rendered, "onerror"
+  end
+
   test "#icon normalizes icon names to lowercase" do
     capture = []
 

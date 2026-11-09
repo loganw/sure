@@ -884,23 +884,21 @@ class SimplefinItem::Importer
       has_holdings = holdings.is_a?(Array) && holdings.any?
       is_investment = has_holdings || acct_name.include?("ira") || acct_name.include?("401k") || acct_name.include?("retirement") || acct_name.include?("brokerage")
 
-      # Always log for all accounts to trace the import flow
-      Rails.logger.info "SimplefinItem::Importer#import_account - account_id=#{account_id} name='#{account_data[:name]}' txn_count=#{transactions&.count || 0} holdings_count=#{holdings&.count || 0}"
+      # Keep production logs structural: institution names and provider
+      # transaction identifiers are financial metadata.
+      Rails.logger.info "SimplefinItem::Importer#import_account - account_id=#{account_id} txn_count=#{transactions&.count || 0} holdings_count=#{holdings&.count || 0}"
 
       if is_investment
-        Rails.logger.info "SimpleFIN Investment Account Debug - account_id=#{account_id} name='#{account_data[:name]}'"
+        Rails.logger.info "SimpleFIN Investment Account Debug - account_id=#{account_id}"
         Rails.logger.info "  - API response keys: #{account_data.keys.inspect}"
         Rails.logger.info "  - transactions count: #{transactions&.count || 0}"
         Rails.logger.info "  - holdings count: #{holdings&.count || 0}"
         Rails.logger.info "  - existing raw_transactions_payload count: #{simplefin_account.raw_transactions_payload.to_a.count}"
 
-        # Log transaction data
         if transactions.is_a?(Array) && transactions.any?
-          Rails.logger.info "  - Transaction IDs: #{transactions.map { |t| t[:id] || t["id"] }.inspect}"
+          Rails.logger.info "  - transactions present"
         else
           Rails.logger.warn "  - NO TRANSACTIONS in API response for investment account!"
-          # Log what the transactions field actually contains
-          Rails.logger.info "  - transactions raw value: #{account_data[:transactions].inspect}"
         end
       end
 
@@ -937,7 +935,7 @@ class SimplefinItem::Importer
         #   Rails.logger.warn("SimpleFin: reconciliation failed for sfa=#{simplefin_account.id || account_id}: #{e.class} - #{e.message}")
         # end
       else
-        Rails.logger.info "SimplefinItem::Importer#import_account - No transactions in API response for account_id=#{account_id} (transactions=#{transactions.inspect.first(100)})"
+        Rails.logger.info "SimplefinItem::Importer#import_account - No transactions in API response for account_id=#{account_id}"
       end
 
       # Track whether incoming holdings are new/changed so we can materialize and refresh balances

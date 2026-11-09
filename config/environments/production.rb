@@ -101,13 +101,16 @@ Rails.application.configure do
   # Do not dump schema after migrations.
   config.active_record.dump_schema_after_migration = false
 
-  # Enable DNS rebinding protection and other `Host` header attacks.
-  # config.hosts = [
-  #   "example.com",     # Allow requests from example.com
-  #   /.*\.example\.com/ # Allow requests from subdomains like `www.example.com`
-  # ]
-  # Skip DNS rebinding protection for the default health check endpoint.
-  # config.host_authorization = { exclude: ->(request) { request.path == "/up" } }
+  # Enable DNS rebinding protection. Local self-hosting works without extra
+  # configuration; intentional LAN/public deployments must list their hostnames
+  # or IP addresses in RAILS_ALLOWED_HOSTS (comma-separated).
+  allowed_hosts = ENV.fetch("RAILS_ALLOWED_HOSTS", "localhost,127.0.0.1,[::1]")
+    .split(",")
+    .map(&:strip)
+    .reject(&:blank?)
+  allowed_hosts << ENV["APP_DOMAIN"].strip if ENV["APP_DOMAIN"].present?
+  config.hosts = allowed_hosts.uniq
+  config.host_authorization = { exclude: ->(request) { request.path == "/up" } }
 
   # set REDIS_URL for Sidekiq to use Redis
   config.active_job.queue_adapter = :sidekiq

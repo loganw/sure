@@ -28,17 +28,18 @@ installation. The feature uses the existing PostHog client, whose project is
 selected by `POSTHOG_KEY` and `POSTHOG_HOST`. Each deployment sets the matching
 feature survey variable; Sankey continues to use `POSTHOG_SANKEY_SURVEY_ID`.
 
-For production self-hosted installations, the result contains `api_key`, `host`,
-and `survey_id` for the shared `[app] self-hosted` project. The token is public
-client configuration; operators need no account or key setup. It must never be a
-PostHog personal or project secret key. An operator's own analytics configuration
-must not change this destination.
+For production self-hosted installations that explicitly set
+`POSTHOG_FEEDBACK_ENABLED=true`, the result contains `api_key`, `host`, and
+`survey_id` for the shared `[app] self-hosted` project. The token is public client
+configuration; operators need no account or key setup. It must never be a PostHog
+personal or project secret key. An operator's own analytics configuration must
+not change this destination.
 
 Unknown features, blank survey IDs, or a missing ID for the selected destination
 return `{}`. There is no fallback to another feature's survey or another project.
-Self-hosted configuration also returns `{}` outside production (unless development explicitly opts in with
-`POSTHOG_DEVELOPMENT_ENABLED=true`) or when
-`POSTHOG_FEEDBACK_ENABLED=false`. This switch is specific to the shared
+Self-hosted configuration also returns `{}` unless feedback is explicitly enabled,
+or outside production unless development explicitly opts in with
+`POSTHOG_DEVELOPMENT_ENABLED=true`. This switch is specific to the shared
 self-hosted feedback connection; managed deployments retain their existing rules.
 
 ## Rotating the public self-hosted project token
@@ -52,7 +53,7 @@ survey retrieval and ingestion against that project, and publish a release.
 Existing self-hosted versions keep their bundled token until upgraded; revoking
 the old token can therefore stop their feedback collection. Charts must remain
 usable when collection is unavailable. Operators can disable the shared
-connection immediately with `POSTHOG_FEEDBACK_ENABLED=false`.
+connection by removing `POSTHOG_FEEDBACK_ENABLED=true` or setting it to `false`.
 
 ## Adding the next feature
 

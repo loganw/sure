@@ -53,4 +53,10 @@ class ActiveRecordEncryptionConfigTest < ActiveSupport::TestCase
     refute ActiveRecordEncryptionConfig.explicitly_configured?
     assert ActiveRecordEncryptionConfig.ready?
   end
+
+  test "encryptable models use runtime generated configuration" do
+    ActiveRecordEncryptionConfig.stubs(:ready?).returns(true)
+
+    assert User.encryption_ready?
+  end
 end
